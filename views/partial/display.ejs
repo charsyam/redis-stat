@@ -1,0 +1,70 @@
+<div class="monitor" id="<%= server.name %>" style="position:relative;">
+<div id="chart_<%= server.name %>" class="chart" style="position:absolute;top:0px;left:0; float:left; width:100%; height:100%;"></div>
+<div style="position:absolute;top:0x;width:100%;height:15px;opacity:0.8; background:white;">
+<p class="name" style="padding-right:2px"><%= server.name %>(<%= server.host %>:<%= server.port %>)</p>
+</div>
+<div style="position:absolute;top:15px;; opacity:0.8; background:white; width:100%; height:95%;">
+<div class="monitor_data">
+<div class="counters">
+<div class="cell line">
+<a href="javascript://" title="processed commands" class="tooltip errorPercentage"><span id='cmd_<%= server.name %>' class="value">0.0</span> /s</a>
+</div>
+<div class="cell borderRight">
+<a href="javascript://" title="Connected Clients" class="line tooltip success">0</a>
+<a href="javascript://" title="Connected Slaves" class="line tooltip shortCircuited">0</a>
+<a href="javascript://" title="Failure Request Count" class="line tooltip failure">0</a> 
+</div>
+<div class="cell borderRight">
+<a href="javascript://" title="Used Memory" class="line tooltip timeout"><div id='mem_<%= server.name %>'>0.0MB</div></a>
+<a href="javascript://" title="Used Memory RSS" class="line tooltip rejected"><div id='peak_<%= server.name %>'>0.0MB</div></a>
+</div>
+</div>
+<div class="rate">
+<a href="javascript://" title="Total Request Rate per Second per Reporting Host" class="tooltip rate"><span class="smaller">hits: </span><span id='hits_<%= server.name %>' class="ratePerSecondPerHost">0</span>/s</a>
+</div>
+<div class="rate">	
+<a href="javascript://" title="Total Request Rate per Second for Cluster" class="tooltip rate"><span class="smaller">miss: </span><span id='miss_<%= server.name %>' class="ratePerSecond">0</span>/s</a>
+</div>
+
+<div class="circuitStatus">
+<a href="javascript://" title="Total Request Rate per Second for Cluster" class="tooltip rate"><span class="smaller"><div id='role_<%= server.name %>'>Master</div></span></a>
+</div>
+
+<div class="spacer"></div>
+
+<div class="tableRow">
+<div class="cell header">Version</div>
+<div class="cell data"><div id='version_<%= server.name %>'>0.0.0</div></div>
+
+<div class="cell header">Uptime</div>
+<div class="cell data"><div id='uptime_<%= server.name %>'>0</div></div>
+</div>
+<div class="tableRow">
+<div class="cell header">user</div>
+<div class="cell data latencyMedian"><span class="value"><div id='user_<%= server.name %>'>0</div></span></div>
+<div class="cell header">sys</div>
+<div class="cell data latency99"><span class="value"><div id='sys_<%= server.name %>'>0</div></span></div>
+</div>
+<div class="tableRow">
+<div class="cell header">expired</div>
+<div class="cell data latencyMean"><span class="value"><div id='exp_<%= server.name %>'>0</div></span></div>
+<div class="cell header">evicted</div>
+<div class="cell data latency995"><span class="value"><div id='evt_<%= server.name %>'></div></span></div>
+</div>
+</div>
+</div>
+<div id="graph_<%= server.name %>" class="graph" style="position:absolute;top:25px;left:0; float:left; width:140px; height:62px;"></div>
+
+<script>
+var y = 200;
+var vis = d3.select("#chart_<%= server.name %>").append("svg:svg").attr("width", "100%").attr("height", "100%");
+/* add a circle -- we don't use the data point, we set it manually, so just passing in [1] */
+var circle = vis.selectAll("circle").data([1]).enter().append("svg:circle");
+/* setup the initial styling and sizing of the circle */
+circle.style("fill", "green").attr("cx", "25%").attr("cy", "30%").attr("r", 5);
+
+/* add the line graph - it will be populated by javascript, no default to show here */
+var graph = d3.select("#graph_<%= server.name %>").append("svg:svg").attr("width", "100%").attr("height", "100%");
+var path = d3.selectAll('#graph_<%= server.name %> svg').append("svg:path").attr("fill", "none").attr("stroke", "steelblue");
+</script>
+</div>

@@ -1,0 +1,12 @@
+{
+  "interval": 1000,
+  "groups": [
+  { "name": "redis-1", 
+    "plugin": "redis", 
+    "servers": [
+    { "name": "server1", "ip": "127.0.0.1", "port": 3001 },
+    { "name": "server2", "ip": "127.0.0.1", "port": 3002 }
+    ]
+  }
+  ]
+}
