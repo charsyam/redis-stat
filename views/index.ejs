@@ -10,6 +10,7 @@
 <script>
     var self = this;
     var value = 1;
+    self.charts = {};
     self.timer_interval = 5000;
     setInterval(function() {
         // sort since we have added a new one
@@ -19,19 +20,31 @@
 
 function refresh() {
     var self = this;
-    $.ajax({ url: '/getdata', data: {}, dataType: 'json', success: function (data) {
+    $.ajax({ url: '/getdata', data: {}, dataType: 'json', 
+        success: function (data) {
             _data = data;
             self.updates(data.services);
-    }});
+        }, 
+        error: function(xhr, ajaxOptions, thrownError) {
+            alert("Check Monitoring Server: It might be dead.");
+            self.updatesAllError(self.charts);
+        }});
+}
+
+function updatesAllError(charts) {
+    var self = this;
+    for (idx in charts) {
+        var chartid = '#chart_' +idx + ' circle';
+        self.updateCircle(chartid, 0, "fail");
+    }
 }
 
 function updates(services) {
+    var self = this;
     for (var i in services) {
         var service = services[i];
-        if( service.status == 'ok' ) {
-            self.update(service);
-        } else {
-        }
+        self.charts[service.name] = 1;
+        self.update(service);
     }
 }
 
@@ -50,6 +63,10 @@ function humanlize(value) {
 }
 
 function roundNumber(num) {
+    if (num==0 || num=="undefined") {
+        return 0;
+    }
+
     var dec=1;
     var result = Math.round(num*Math.pow(10,dec))/Math.pow(10,dec);
     var resultAsString = result.toString();
@@ -59,11 +76,64 @@ function roundNumber(num) {
     return resultAsString;
 };
 
-function update(service) {
+function updateCircle(id, value, status) {
+    var maxXaxisForCircle="40%";
+    var maxYaxisForCircle="40%";
+    var maxRadiusForCircle="125";
+
+    self.circuitCircleRadius = d3.scale.pow().exponent(0.5).domain([0, 400]).range(["5", maxRadiusForCircle]); // requests per second per host
+    self.circuitCircleYaxis = d3.scale.linear().domain([0, 400]).range(["30%", maxXaxisForCircle]);
+    self.circuitCircleXaxis = d3.scale.linear().domain([0, 400]).range(["30%", maxYaxisForCircle]);
+    self.circuitColorRange = d3.scale.linear().domain([10, 25, 40, 50]).range(["green", "#FFCC00", "#FF9900", "red"]);
+    self.circuitErrorPercentageColorRange = d3.scale.linear().domain([0, 10, 35, 50]).range(["grey", "black", "#FF9900", "red"]);
+
+    var newXaxisForCircle = self.circuitCircleXaxis(0);
+    var newYaxisForCircle = self.circuitCircleYaxis(100);
+    var newRadiusForCircle= self.circuitCircleRadius(value/120);
+    var circuitColorRange = self.circuitColorRange(newRadiusForCircle);
+    if(status == 'fail') {
+        newRadiusForCircle = 1000;
+        circuitColorRange = 'red';
+    }
+
+    d3.selectAll(id)
+        .transition()
+        .duration(400)
+        .attr("cx", "25%")
+        .attr("cy", newYaxisForCircle)
+        .attr("r", newRadiusForCircle)
+        .style("fill", circuitColorRange);
+};
+
+function updateLine(name) {
+    var data = self['graph_' + name + '_data'];
+    var id = '#graph_' + name + " path";
+
+    var currentTimeMilliseconds = new Date().getTime();
+    var xScale = d3.time.scale().domain([new Date(currentTimeMilliseconds-(60*1000*2)), new Date(currentTimeMilliseconds)]).range([0, 140]);
+
+    var yMin = d3.min(data, function(d) { return d.v; });
+    var yMax = d3.max(data, function(d) { return d.v; });
+    var yScale = d3.scale.linear().domain([yMin, yMax]).nice().range([60, 0]); // y goes DOWN, so 60 is the "lowest"
+
+    // assign the X function to plot our line as we wish
+    sparkline = d3.svg.line()
+    .x(function(d) { 
+    // return the X coordinate where we want to plot this datapoint based on the time
+    return xScale(new Date(d.t));
+    })
+    .y(function(d) {
+    return yScale(d.v);
+    })
+    .interpolate("basis");
+
+    d3.selectAll(id)
+    .attr("d", sparkline(data));
+};
+
+function updateInfo(service, cmd, hits, miss, expired, evicted) {
     var self = this;
 
-    var id1 = '#chart_' + service.name + " circle";
-    var id2 = '#graph_' + service.name + " path";
     var mem_id = '#mem_' + service.name;
     var peak_id = '#peak_' + service.name;
     var role_id = '#role_' + service.name;
@@ -77,30 +147,62 @@ function update(service) {
     var hits_id = '#hits_' + service.name;
     var miss_id = '#miss_' + service.name;
 
-    var maxXaxisForCircle="40%";
-    var maxYaxisForCircle="40%";
-    var maxRadiusForCircle="125";
+    $(mem_id).text(service.used_memory_human);
+    $(peak_id).text(service.used_memory_peak_human);
+    $(role_id).text(service.role);
+    $(uptime_id).text(service.uptime_in_seconds);
+    $(user_id).text(service.used_cpu_user);
+    $(sys_id).text(service.used_cpu_sys);
+    $(exp_id).text(humanlize(expired));
+    $(evt_id).text(humanlize(evicted));
+    $(ver_id).text(service.redis_version);
+    $(cmd_id).text(humanlize(cmd));
+    $(hits_id).text(humanlize(hits));
+    $(miss_id).text(humanlize(miss));
+};
+
+function update(service, diff_cmd, hits, miss, expired, evicted) {
+    var self = this;
+
+    var mem_id = '#mem_' + service.name;
+    var peak_id = '#peak_' + service.name;
+    var role_id = '#role_' + service.name;
+    var uptime_id = '#uptime_' + service.name;
+    var user_id = '#user_' + service.name;
+    var sys_id = '#sys_' + service.name;
+    var exp_id = '#exp_' + service.name;
+    var evt_id = '#evt_' + service.name;
+    var ver_id = '#version_' + service.name;
+    var cmd_id = '#cmd_' + service.name;
+    var hits_id = '#hits_' + service.name;
+    var miss_id = '#miss_' + service.name;
 
     var currentTimeMilliseconds = new Date().getTime();
-    var data = self['graph_' + service.name + '_data'];
     var prev_hits = self['hits_' + service.name + '_data'];
     var prev_miss = self['miss_' + service.name + '_data'];
     var prev_expired = self['expired_' + service.name + '_data'];
     var prev_evicted = self['evicted_' + service.name + '_data'];
     var prev_total_commands_processed = self['graph_commands_' + service.name + '_data'];
 
+    var data = self['graph_' + service.name + '_data'];
+
     var newDataPoint;
     var hits, miss, expired, evicted;
 
     if(typeof data == 'undefined') {
-        newDataPoint = roundNumber(service.total_commands_processed/service.uptime_in_seconds);
+        var uptime_in_sec = service.uptime_in_seconds;
+        if (uptime_in_sec == 0) {
+            uptime_in_sec = 1;
+        }
+
+        newDataPoint = roundNumber(service.total_commands_processed/uptime_in_sec);
         data = [{"v":parseFloat(newDataPoint), "t":currentTimeMilliseconds}];
         self['graph_' + service.name + '_data'] = data;
 
-        hits = roundNumber(service.keyspace_hits/service.uptime_in_seconds);
-        miss = roundNumber(service.keyspace_misses/service.uptime_in_seconds);
-        expired = roundNumber(service.expired_keys/service.uptime_in_seconds);
-        evicted = roundNumber(service.evicted_keys/service.uptime_in_seconds);
+        hits = roundNumber(service.keyspace_hits/uptime_in_sec);
+        miss = roundNumber(service.keyspace_misses/uptime_in_sec);
+        expired = roundNumber(service.expired_keys/uptime_in_sec);
+        evicted = roundNumber(service.evicted_keys/uptime_in_sec);
     } else {
         newDataPoint = service.total_commands_processed - prev_total_commands_processed;
         newDataPoint = roundNumber(newDataPoint/(self.timer_interval/1000));
@@ -117,6 +219,11 @@ function update(service) {
     self['expired_' + service.name + '_data'] = service.expired_keys;
     self['evicted_' + service.name + '_data'] = service.evicted_keys;
 
+    var id = '#chart_' + service.name + " circle";
+    updateCircle(id, newDataPoint, service.status);
+    updateInfo(service, newDataPoint, hits, miss,
+               expired, evicted);
+
     while(data.length > 50) {
         data.shift();
     }
@@ -129,44 +236,7 @@ function update(service) {
         data.shift();
     }
 
-    self.circuitCircleRadius = d3.scale.pow().exponent(0.5).domain([0, 400]).range(["5", maxRadiusForCircle]); // requests per second per host
-    self.circuitCircleYaxis = d3.scale.linear().domain([0, 400]).range(["30%", maxXaxisForCircle]);
-    self.circuitCircleXaxis = d3.scale.linear().domain([0, 400]).range(["30%", maxYaxisForCircle]);
-    self.circuitColorRange = d3.scale.linear().domain([10, 25, 40, 50]).range(["green", "#FFCC00", "#FF9900", "red"]);
-    self.circuitErrorPercentageColorRange = d3.scale.linear().domain([0, 10, 35, 50]).range(["grey", "black", "#FF9900", "red"]);
-
-    var newXaxisForCircle = self.circuitCircleXaxis(0);
-    var newYaxisForCircle = self.circuitCircleYaxis(100);
-    var newRadiusForCircle= self.circuitCircleRadius(newDataPoint/120);
-
-    d3.selectAll(id1)
-        .transition()
-        .duration(400)
-        .attr("cx", "25%")
-        .attr("cy", newYaxisForCircle)
-        .attr("r", newRadiusForCircle)
-        .style("fill", self.circuitColorRange(0))
-
-        var currentTimeMilliseconds = new Date().getTime();
-        var xScale = d3.time.scale().domain([new Date(currentTimeMilliseconds-(60*1000*2)), new Date(currentTimeMilliseconds)]).range([0, 140]);
-
-        var yMin = d3.min(data, function(d) { return d.v; });
-        var yMax = d3.max(data, function(d) { return d.v; });
-        var yScale = d3.scale.linear().domain([yMin, yMax]).nice().range([60, 0]); // y goes DOWN, so 60 is the "lowest"
-
-        // assign the X function to plot our line as we wish
-        sparkline = d3.svg.line()
-        .x(function(d,i) { 
-            // return the X coordinate where we want to plot this datapoint based on the time
-            return xScale(new Date(d.t));
-        })
-        .y(function(d) {
-            return yScale(d.v);
-        })
-        .interpolate("basis");
-
-        d3.selectAll(id2)
-        .attr("d", sparkline(data));
+    updateLine(service.name);
 
     $(mem_id).text(service.used_memory_human);
     $(peak_id).text(service.used_memory_peak_human);
@@ -180,7 +250,6 @@ function update(service) {
     $(cmd_id).text(humanlize(newDataPoint));
     $(hits_id).text(humanlize(hits));
     $(miss_id).text(humanlize(miss));
-
 }
 </script>
   </head>

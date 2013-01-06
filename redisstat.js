@@ -44,13 +44,16 @@ var self = this;
 self.request_count = 0;
 self.check = false;
 
-for (var i in config.groups) {
-    var group = config.groups[i];
-    if (group.plugin == "redis") {
-        for(var idx in group.servers) {
-            var server = group.servers[idx];
-            redislist[idx] = redis.createClient(server.port, server.ip);
-            redislist[idx]['name'] = server.name;
+for (var i in config.clusters) {
+    var cluster= config.clusters[i];
+    if (cluster.plugin == "redis") {
+        for(var idx in cluster.nodes) {
+            var node = cluster.nodes[idx];
+            redislist[idx] = redis.createClient(node.port, node.ip);
+            redislist[idx]['name'] = node.name;
+            redislist[idx].on("error", function(err) {
+                  console.error("Error connecting to redis", err);
+            });
         }
         require('./routes/index').add_routes(app, redislist);
     }
@@ -60,6 +63,7 @@ setInterval(function() {
     if (self.check == false) {
         self.check = true;
         self.request_count = redislist.length;
+        console.log(self.request_count);
         self.infos = new Array();
         for (var i in redislist) {
             var client = redislist[i];
@@ -71,8 +75,25 @@ setInterval(function() {
 function info(client) {
     client.info(function(err,res){
         if (err) {
-            o = new Object();
-            o["status"] = "fail";
+            o = {
+                "redis_version": "0.0.0",
+                "uptime_in_seconds": 0,
+                "connected_clients" : 0,
+                "connected_slaves": 0, 
+                "used_memory_human": 0, 
+                "used_memory_peak_human": 0,
+                "used_memory_rss": 0, 
+                "aof_enabled": 0, 
+                "total_commands_processed": 0,
+                "expired_keys": 0, 
+                "evicted_keys": 0,
+                "keyspace_hits": 0, 
+                "keyspace_misses": 0, 
+                "role": "error", 
+                "used_cpu_sys": 0,
+                "used_cpu_user": 0,
+                "status": "fail"
+            };
         } else {
             o = parseInfo(res);
             o["status"] = "ok";
@@ -92,7 +113,24 @@ function info(client) {
 
 function parseInfo( info ) {
     var lines = info.split( "\r\n" );
-    var obj = { };
+    var obj = {
+        "redis_version": "0.0.0",
+        "uptime_in_seconds": 0,
+        "connected_clients" : 0,
+        "connected_slaves": 0, 
+        "used_memory_human": 0, 
+        "used_memory_peak_human": 0,
+        "used_memory_rss": 0, 
+        "aof_enabled": 0, 
+        "total_commands_processed": 0,
+        "expired_keys": 0, 
+        "evicted_keys": 0,
+        "keyspace_hits": 0, 
+        "keyspace_misses": 0, 
+        "role": "error", 
+        "used_cpu_sys": 0,
+        "used_cpu_user": 0 
+    };
     for ( var i = 0, l = info.length; i < l; i++ ) {
         var line = lines[ i ];
         if ( line && line.split ) {
