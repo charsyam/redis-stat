@@ -157,7 +157,7 @@ function updateInfo(service, cmd, cluster_cmd, hits, miss, expired, evicted) {
 
     $(mem_id).text(service.used_memory_human);
     $(peak_id).text(service.used_memory_peak_human);
-    $(role_id).text(service.role);
+    $(role_id).text(service.cluster_name + ":" + service.role);
     $(uptime_id).text(service.uptime_in_seconds);
     $(user_id).text(service.used_cpu_user);
     $(sys_id).text(service.used_cpu_sys);
