@@ -219,10 +219,14 @@ function update(service, currentTimeMilliseconds, cluster_size) {
         cluster_cmd = (cluster_size - prev_cluster_size);
         cluster_cmd = roundNumber(cluster_cmd/(self.timer_interval/1000));
         data.push({"v":parseFloat(newDataPoint), "t":currentTimeMilliseconds});
-        hits = roundNumber(service.keyspace_hits-prev_hits);
-        miss = roundNumber(service.keyspace_misses-prev_miss);
-        expired = roundNumber(service.expired_keys-prev_expired);
-        evicted = roundNumber(service.evicted_keys-prev_evicted);
+        hits = (service.keyspace_hits-prev_hits);
+        hits = roundNumber(hits/(self.timer_interval/1000));
+        miss = (service.keyspace_misses-prev_miss);
+        miss = roundNumber(miss/(self.timer_interval/1000));
+        expired = (service.expired_keys-prev_expired);
+        expired = roundNumber(expired/(self.timer_interval/1000));
+        evicted = (service.evicted_keys-prev_evicted);
+        evicted = roundNumber(evicted/(self.timer_interval/1000));
     }
 
     self['graph_commands_' + service.name + '_data'] = service.total_commands_processed;

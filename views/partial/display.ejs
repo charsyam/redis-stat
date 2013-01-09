@@ -6,12 +6,6 @@
 <div style="position:absolute;top:15px;; opacity:0.8; background:white; width:100%; height:95%;">
 <div class="monitor_data">
 <div class="counters">
-<div class="cell line">
-<a href="javascript://" title="processed commands" class="tooltip errorPercentage"><span id='cmd_<%= server.name %>' class="value">0.0</span> /s</a>
-<div></div>
-<a href="javascript://" title="cluster processed commands" class="tooltip clusterTotalCommand"><span id='cluster_cmd_<%= server.name %>' class="value">0.0</span> /s</a>
-
-</div>
 <div class="cell borderRight">
 <a href="javascript://" title="Connected Clients" class="line tooltip success">0</a>
 <a href="javascript://" title="Connected Slaves" class="line tooltip shortCircuited">0</a>
@@ -23,14 +17,13 @@
 </div>
 </div>
 <div class="rate">
-<a href="javascript://" title="Total Request Rate per Second per Reporting Host" class="tooltip rate"><span class="smaller">hits: </span><span id='hits_<%= server.name %>' class="ratePerSecondPerHost">0</span>/s</a>
+<a href="javascript://" title="Total Request Rate per Second per Reporting Host" class="tooltip rate"><span class="smaller">Host: </span><span class="ratePerSecondPerHost" id='cmd_<%= server.name %>'>0</span>/s</a>
 </div>
-<div class="rate">	
-<a href="javascript://" title="Total Request Rate per Second for Cluster" class="tooltip rate"><span class="smaller">miss: </span><span id='miss_<%= server.name %>' class="ratePerSecond">0</span>/s</a>
+<div class="rate">  
+<a href="javascript://" title="Total Request Rate per Second for Cluster" class="tooltip rate"><span class="smaller">Cluster: </span><font color='blue'><span class="ratePerSecond" id='cluster_cmd_<%= server.name %>'>0</span>/s</font></a>
 </div>
-
 <div class="circuitStatus">
-<a href="javascript://" title="Total Request Rate per Second for Cluster" class="tooltip rate"><span class="smaller"><div id='role_<%= server.name %>'>Master</div></span></a>
+<a href="javascript://" title="Total Request Rate per Second for Cluster" class="tooltip rate"><span class="smaller"><font color='blue'><div id='role_<%= server.name %>'>Master></div></font></span></a>
 </div>
 
 <div class="spacer"></div>
