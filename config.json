@@ -1,11 +1,20 @@
 {
   "interval": 1000,
   "clusters": [
-  { "name": "redis-1", 
-    "plugin": "redis", 
+  {
+    "name": "redis-1", 
+    "type": "redis", 
     "nodes": [
-    { "name": "server1", "ip": "127.0.0.1", "port": 3001 },
-    { "name": "server2", "ip": "127.0.0.1", "port": 3002 }
+    { "name": "server1", "host": "127.0.0.1", "port": 3001 },
+    { "name": "server2", "host": "127.0.0.1", "port": 3002 }
+    ]
+  },
+  {
+    "name": "redis-2", 
+    "type": "redis", 
+    "nodes": [
+    { "name": "server3", "host": "127.0.0.1", "port": 3001 },
+    { "name": "server4", "host": "127.0.0.1", "port": 3002 }
     ]
   }
   ]

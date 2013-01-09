@@ -1,4 +1,3 @@
-
 /**
  * Module dependencies.
  */
@@ -9,7 +8,8 @@ var express = require('express')
   , redis = require('redis')
   , config = require('./config.json')
   , path = require('path')
-  , Storage = require('./storage');
+  , Storage = require('./storage')
+  , monitorFactory = require('./monitor/factory');
 
 var app = express();
 
@@ -39,35 +39,54 @@ http.createServer(app).listen(app.get('port'), function(){
 var storage = new Storage();
 require('./routes/getdata').add_routes(app, storage);
 
-var redislist = new Array();
 var self = this;
 self.request_count = 0;
 self.check = false;
 
+self.clusters = new Array();
+self.max_request_count = 0;
+
 for (var i in config.clusters) {
-    var cluster= config.clusters[i];
-    if (cluster.plugin == "redis") {
-        for(var idx in cluster.nodes) {
-            var node = cluster.nodes[idx];
-            redislist[idx] = redis.createClient(node.port, node.ip);
-            redislist[idx]['name'] = node.name;
-            redislist[idx].on("error", function(err) {
-                  console.error("Error connecting to redis", err);
-            });
-        }
-        require('./routes/index').add_routes(app, redislist);
+    var cluster = config.clusters[i];
+    var nodes = new Array();
+    var register = false;
+    for(var idx in cluster.nodes) {
+        var node = cluster.nodes[idx];
+        nodes[idx] = monitorFactory.create(cluster.name, cluster.type, node.host, node.port);
+        nodes[idx]['name'] = node.name;
+        self.max_request_count++;
+        register = true;
+    }
+
+    if (register == true) {
+        var cluster_info = {
+            'name': cluster.name,
+            'type': cluster.type,
+            'nodes': nodes
+        };
+        self.clusters.push(cluster_info);
     }
 }
 
+require('./routes/index').add_routes(app, self.clusters);
+
+function report() {
+    self.request_count--;
+}
+
+self.infos = new Object();
 setInterval(function() {
     if (self.check == false) {
         self.check = true;
-        self.request_count = redislist.length;
-        console.log(self.request_count);
-        self.infos = new Array();
-        for (var i in redislist) {
-            var client = redislist[i];
-            info(client);
+        self.request_count = self.max_request_count;
+        self.infos['nodes'] = new Array();
+        for (var i in self.clusters) {
+            var cluster = self.clusters[i];
+            self.infos[cluster.name] = 0;
+            for (var idx in cluster.nodes) {
+                var node = cluster.nodes[idx];
+                info(node);
+            }
         }
     }
 },2000);
@@ -101,7 +120,12 @@ function info(client) {
         o["port"] = client.port;
         o["host"] = client.host;
         o["name"] = client.name;
-        self.infos.push(o);
+        o["cluster_name"] = client.cluster_name;
+        o["type"] = client.type;
+
+        self.infos[client.cluster_name] += parseInt(o.total_commands_processed);
+        self.infos.nodes.push(o);
+
 
         self.request_count--;
         if (self.request_count == 0) {

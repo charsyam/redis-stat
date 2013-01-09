@@ -8,27 +8,27 @@
     <link rel="stylesheet" href="/stylesheets/monitor.css" type="text/css" />
     <link rel="stylesheet" href="/stylesheets/stat.css" type="text/css" />
 <script>
-    var self = this;
-    var value = 1;
-    self.charts = {};
-    self.timer_interval = 5000;
-    setInterval(function() {
+var self = this;
+var value = 1;
+self.charts = {};
+self.timer_interval = 5000;
+setInterval(function() {
         // sort since we have added a new one
         self.refresh()
         value++;
-    }, self.timer_interval);
+        }, self.timer_interval);
 
 function refresh() {
     var self = this;
     $.ajax({ url: '/getdata', data: {}, dataType: 'json', 
-        success: function (data) {
+            success: function (data) {
             _data = data;
             self.updates(data.services);
-        }, 
-        error: function(xhr, ajaxOptions, thrownError) {
-            alert("Check Monitoring Server: It might be dead.");
-            self.updatesAllError(self.charts);
-        }});
+            }, 
+error: function(xhr, ajaxOptions, thrownError) {
+alert("Check Monitoring Server: It might be dead.");
+self.updatesAllError(self.charts);
+}});
 }
 
 function updatesAllError(charts) {
@@ -41,10 +41,19 @@ function updatesAllError(charts) {
 
 function updates(services) {
     var self = this;
-    for (var i in services) {
-        var service = services[i];
+    var currentTimeMilliseconds = new Date().getTime();
+
+    for (var i in services.nodes) {
+        var service = services.nodes[i];
         self.charts[service.name] = 1;
-        self.update(service);
+        var cluster_size = services[service.cluster_name];
+        self.update(service, currentTimeMilliseconds, cluster_size);
+    }
+
+    for (var i in services.nodes) {
+        var service = services.nodes[i];
+        var cluster_size = services[service.cluster_name];
+        self['graph_cluster_commands_' + service.cluster_name + '_data'] = cluster_size;
     }
 }
 
@@ -105,11 +114,10 @@ function updateCircle(id, value, status) {
         .style("fill", circuitColorRange);
 };
 
-function updateLine(name) {
+function updateLine(name, currentTimeMilliseconds) {
     var data = self['graph_' + name + '_data'];
     var id = '#graph_' + name + " path";
 
-    var currentTimeMilliseconds = new Date().getTime();
     var xScale = d3.time.scale().domain([new Date(currentTimeMilliseconds-(60*1000*2)), new Date(currentTimeMilliseconds)]).range([0, 140]);
 
     var yMin = d3.min(data, function(d) { return d.v; });
@@ -118,20 +126,20 @@ function updateLine(name) {
 
     // assign the X function to plot our line as we wish
     sparkline = d3.svg.line()
-    .x(function(d) { 
-    // return the X coordinate where we want to plot this datapoint based on the time
-    return xScale(new Date(d.t));
-    })
+        .x(function(d) { 
+                // return the X coordinate where we want to plot this datapoint based on the time
+                return xScale(new Date(d.t));
+                })
     .y(function(d) {
-    return yScale(d.v);
-    })
+            return yScale(d.v);
+            })
     .interpolate("basis");
 
     d3.selectAll(id)
-    .attr("d", sparkline(data));
+        .attr("d", sparkline(data));
 };
 
-function updateInfo(service, cmd, hits, miss, expired, evicted) {
+function updateInfo(service, cmd, cluster_cmd, hits, miss, expired, evicted) {
     var self = this;
 
     var mem_id = '#mem_' + service.name;
@@ -142,8 +150,8 @@ function updateInfo(service, cmd, hits, miss, expired, evicted) {
     var sys_id = '#sys_' + service.name;
     var exp_id = '#exp_' + service.name;
     var evt_id = '#evt_' + service.name;
-    var ver_id = '#version_' + service.name;
     var cmd_id = '#cmd_' + service.name;
+    var clu_cmd_id = '#cluster_cmd_' + service.name;
     var hits_id = '#hits_' + service.name;
     var miss_id = '#miss_' + service.name;
 
@@ -155,13 +163,13 @@ function updateInfo(service, cmd, hits, miss, expired, evicted) {
     $(sys_id).text(service.used_cpu_sys);
     $(exp_id).text(humanlize(expired));
     $(evt_id).text(humanlize(evicted));
-    $(ver_id).text(service.redis_version);
     $(cmd_id).text(humanlize(cmd));
+    $(clu_cmd_id).text(humanlize(cluster_cmd));
     $(hits_id).text(humanlize(hits));
     $(miss_id).text(humanlize(miss));
 };
 
-function update(service, diff_cmd, hits, miss, expired, evicted) {
+function update(service, currentTimeMilliseconds, cluster_size) {
     var self = this;
 
     var mem_id = '#mem_' + service.name;
@@ -172,21 +180,22 @@ function update(service, diff_cmd, hits, miss, expired, evicted) {
     var sys_id = '#sys_' + service.name;
     var exp_id = '#exp_' + service.name;
     var evt_id = '#evt_' + service.name;
-    var ver_id = '#version_' + service.name;
     var cmd_id = '#cmd_' + service.name;
+    var clu_cmd_id = '#cluster_cmd_' + service.name;
     var hits_id = '#hits_' + service.name;
     var miss_id = '#miss_' + service.name;
 
-    var currentTimeMilliseconds = new Date().getTime();
     var prev_hits = self['hits_' + service.name + '_data'];
     var prev_miss = self['miss_' + service.name + '_data'];
     var prev_expired = self['expired_' + service.name + '_data'];
     var prev_evicted = self['evicted_' + service.name + '_data'];
     var prev_total_commands_processed = self['graph_commands_' + service.name + '_data'];
+    var prev_cluster_size = self['graph_cluster_commands_' + service.cluster_name + '_data'];
 
     var data = self['graph_' + service.name + '_data'];
 
     var newDataPoint;
+    var cluster_cmd;
     var hits, miss, expired, evicted;
 
     if(typeof data == 'undefined') {
@@ -196,6 +205,7 @@ function update(service, diff_cmd, hits, miss, expired, evicted) {
         }
 
         newDataPoint = roundNumber(service.total_commands_processed/uptime_in_sec);
+        cluster_cmd = roundNumber(cluster_size/uptime_in_sec);
         data = [{"v":parseFloat(newDataPoint), "t":currentTimeMilliseconds}];
         self['graph_' + service.name + '_data'] = data;
 
@@ -206,6 +216,8 @@ function update(service, diff_cmd, hits, miss, expired, evicted) {
     } else {
         newDataPoint = service.total_commands_processed - prev_total_commands_processed;
         newDataPoint = roundNumber(newDataPoint/(self.timer_interval/1000));
+        cluster_cmd = (cluster_size - prev_cluster_size);
+        cluster_cmd = roundNumber(cluster_cmd/(self.timer_interval/1000));
         data.push({"v":parseFloat(newDataPoint), "t":currentTimeMilliseconds});
         hits = roundNumber(service.keyspace_hits-prev_hits);
         miss = roundNumber(service.keyspace_misses-prev_miss);
@@ -221,8 +233,8 @@ function update(service, diff_cmd, hits, miss, expired, evicted) {
 
     var id = '#chart_' + service.name + " circle";
     updateCircle(id, newDataPoint, service.status);
-    updateInfo(service, newDataPoint, hits, miss,
-               expired, evicted);
+    updateInfo(service, newDataPoint, cluster_cmd, hits, miss,
+            expired, evicted);
 
     while(data.length > 50) {
         data.shift();
@@ -236,20 +248,7 @@ function update(service, diff_cmd, hits, miss, expired, evicted) {
         data.shift();
     }
 
-    updateLine(service.name);
-
-    $(mem_id).text(service.used_memory_human);
-    $(peak_id).text(service.used_memory_peak_human);
-    $(role_id).text(service.role);
-    $(uptime_id).text(service.uptime_in_seconds);
-    $(user_id).text(service.used_cpu_user);
-    $(sys_id).text(service.used_cpu_sys);
-    $(exp_id).text(humanlize(expired));
-    $(evt_id).text(humanlize(evicted));
-    $(ver_id).text(service.redis_version);
-    $(cmd_id).text(humanlize(newDataPoint));
-    $(hits_id).text(humanlize(hits));
-    $(miss_id).text(humanlize(miss));
+    updateLine(service.name, currentTimeMilliseconds);
 }
 </script>
   </head>
@@ -259,11 +258,15 @@ function update(service, diff_cmd, hits, miss, expired, evicted) {
       </div>
       <div class="container">
           <div id="dependencies" class="row dependencies">
-          <% for (var i in servers) { 
-            var server = servers[i]; %>
+          <% for (var i in clusters) { 
+            var cluster = clusters[i]; 
+            for (var idx in cluster.nodes) {
+            var server = cluster.nodes[idx];
+          %>
           <% include partial/display %>
           <%
              }
+          }
           %>
           </div>
       </div>

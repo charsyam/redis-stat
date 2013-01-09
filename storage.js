@@ -5,15 +5,11 @@ function Storage() {
 }
 
 Storage.prototype.report_all = function(callback) {
-    var self = this;
-    callback(null, {services: self.infos});
+    callback(null, { services: this.infos});
 };
 
 Storage.prototype.store = function(infos) {
-    var self = this;
-    var old_infos = self.infos;
-    self.infos = infos;
-    delete old_infos;
+    this.infos = infos;
 };
 
 module.exports = Storage;

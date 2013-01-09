@@ -8,6 +8,9 @@
 <div class="counters">
 <div class="cell line">
 <a href="javascript://" title="processed commands" class="tooltip errorPercentage"><span id='cmd_<%= server.name %>' class="value">0.0</span> /s</a>
+<div></div>
+<a href="javascript://" title="cluster processed commands" class="tooltip clusterTotalCommand"><span id='cluster_cmd_<%= server.name %>' class="value">0.0</span> /s</a>
+
 </div>
 <div class="cell borderRight">
 <a href="javascript://" title="Connected Clients" class="line tooltip success">0</a>
@@ -50,6 +53,12 @@
 <div class="cell data latencyMean"><span class="value"><div id='exp_<%= server.name %>'>0</div></span></div>
 <div class="cell header">evicted</div>
 <div class="cell data latency995"><span class="value"><div id='evt_<%= server.name %>'></div></span></div>
+</div>
+<div class="tableRow">
+<div class="cell header">hits</div>
+<div class="cell data latencyMean"><span class="value" id='hits_<%= server.name %>'>0</span>/s</div>
+<div class="cell header">miss</div>
+<div class="cell data latency995"><span class="value" id='miss_<%= server.name %>'>0</span>/s</div>
 </div>
 </div>
 </div>
