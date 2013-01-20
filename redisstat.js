@@ -43,53 +43,63 @@ var self = this;
 self.request_count = 0;
 self.check = false;
 
-self.clusters = new Array();
-self.max_request_count = 0;
+self.clusters = new Object();
+self.clusters['nodes'] = new Array();
+self.clusters['clusters'] = new Array();
+self.clusters['max_request_count'] = 0;
 
 for (var i in config.clusters) {
-    var cluster = config.clusters[i];
-    var nodes = new Array();
+    var cluster_conf = config.clusters[i];
     var register = false;
-    for(var idx in cluster.nodes) {
-        var node = cluster.nodes[idx];
-        nodes[idx] = monitorFactory.create(cluster.name, cluster.type, node.host, node.port);
-        nodes[idx]['name'] = node.name;
-        self.max_request_count++;
-        register = true;
-    }
 
-    if (register == true) {
+    if (cluster_conf.nodes.length > 0) {
+        for(var idx in cluster_conf.nodes) {
+            var node = cluster_conf.nodes[idx];
+            var conn = monitorFactory.create(cluster_conf.name, 
+                                             cluster_conf.type, 
+                                             node.host, node.port);
+            conn['name'] = node.name;
+            conn['cluster_name'] = cluster_conf.name;
+            conn['cluster_length'] = cluster_conf.nodes.length;
+            conn['type'] = cluster_conf.type;
+            self.clusters.nodes.push(conn);
+            self.clusters.max_request_count++;
+        }
+
         var cluster_info = {
-            'name': cluster.name,
-            'type': cluster.type,
-            'nodes': nodes
+            "name": cluster_conf.name,
+            "length": cluster_conf.nodes.length,
+            "type": cluster_conf.type,
         };
-        self.clusters.push(cluster_info);
+
+        self.clusters.clusters.push(cluster_info);
     }
 }
 
 require('./routes/index').add_routes(app, self.clusters);
+require('./routes/groups').add_routes(app, self.clusters);
 
-function report() {
-    self.request_count--;
-}
-
-self.infos = new Object();
 setInterval(function() {
     if (self.check == false) {
         self.check = true;
-        self.request_count = self.max_request_count;
-        self.infos['nodes'] = new Array();
-        for (var i in self.clusters) {
-            var cluster = self.clusters[i];
-            self.infos[cluster.name] = 0;
-            for (var idx in cluster.nodes) {
-                var node = cluster.nodes[idx];
-                info(node);
+        self.request_count = self.clusters.max_request_count;
+        self.infos = new Object();
+        for (var i in self.clusters.nodes) {
+            var node = self.clusters.nodes[i];
+            var cluster = self.infos[node.cluster_name];
+            if (typeof cluster == "undefined") {
+                self.infos[node.cluster_name] = new Object();
+                self.infos[node.cluster_name]['commands'] = 0;
+                self.infos[node.cluster_name]['length'] = node.cluster_length;
+                self.infos[node.cluster_name]['success_count'] = 0;
+                self.infos[node.cluster_name]['error_count'] = 0;
+                self.infos[node.cluster_name]['nodes'] = new Array();
             }
+
+            info(node);
         }
     }
-},2000);
+},config.interval);
 
 function info(client) {
     client.info(function(err,res){
@@ -113,9 +123,11 @@ function info(client) {
                 "used_cpu_user": 0,
                 "status": "fail"
             };
+            self.infos[client.cluster_name]['error_count']++;
         } else {
             o = parseInfo(res);
             o["status"] = "ok";
+            self.infos[client.cluster_name]['success_count']++;
         }
         o["port"] = client.port;
         o["host"] = client.host;
@@ -123,9 +135,8 @@ function info(client) {
         o["cluster_name"] = client.cluster_name;
         o["type"] = client.type;
 
-        self.infos[client.cluster_name] += parseInt(o.total_commands_processed);
-        self.infos.nodes.push(o);
-
+        self.infos[client.cluster_name]['commands'] += parseInt(o.total_commands_processed);
+        self.infos[client.cluster_name]['nodes'].push(o);
 
         self.request_count--;
         if (self.request_count == 0) {

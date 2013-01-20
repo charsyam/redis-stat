@@ -14,7 +14,7 @@ self.charts = {};
 self.timer_interval = 5000;
 setInterval(function() {
         // sort since we have added a new one
-        self.refresh()
+        self.refresh();
         value++;
         }, self.timer_interval);
 
@@ -23,7 +23,7 @@ function refresh() {
     $.ajax({ url: '/getdata', data: {}, dataType: 'json', 
             success: function (data) {
             _data = data;
-            self.updates(data.services);
+            self.updates(data.clusters);
             }, 
 error: function(xhr, ajaxOptions, thrownError) {
 alert("Check Monitoring Server: It might be dead.");
@@ -32,28 +32,23 @@ self.updatesAllError(self.charts);
 }
 
 function updatesAllError(charts) {
-    var self = this;
     for (idx in charts) {
         var chartid = '#chart_' +idx + ' circle';
         self.updateCircle(chartid, 0, "fail");
     }
 }
 
-function updates(services) {
-    var self = this;
+function updates(clusters) {
     var currentTimeMilliseconds = new Date().getTime();
 
-    for (var i in services.nodes) {
-        var service = services.nodes[i];
-        self.charts[service.name] = 1;
-        var cluster_size = services[service.cluster_name];
-        self.update(service, currentTimeMilliseconds, cluster_size);
-    }
-
-    for (var i in services.nodes) {
-        var service = services.nodes[i];
-        var cluster_size = services[service.cluster_name];
-        self['graph_cluster_commands_' + service.cluster_name + '_data'] = cluster_size;
+    for (var cluster_name in clusters) {
+        var cluster = clusters[cluster_name];
+        for (var i in cluster.nodes) {
+            var node = cluster.nodes[i];
+            self.charts[node.name] = 1;
+            self.update(node, currentTimeMilliseconds, cluster.commands);
+        }
+        self['graph_cluster_commands_' + cluster_name + '_data'] = cluster.commands;
     }
 }
 
@@ -154,6 +149,8 @@ function updateInfo(service, cmd, cluster_cmd, hits, miss, expired, evicted) {
     var clu_cmd_id = '#cluster_cmd_' + service.name;
     var hits_id = '#hits_' + service.name;
     var miss_id = '#miss_' + service.name;
+    var clients_id = '#cnt_clients_' + service.name;
+    var slaves_id = '#cnt_slaves_' + service.name;
 
     $(mem_id).text(service.used_memory_human);
     $(peak_id).text(service.used_memory_peak_human);
@@ -167,6 +164,8 @@ function updateInfo(service, cmd, cluster_cmd, hits, miss, expired, evicted) {
     $(clu_cmd_id).text(humanlize(cluster_cmd));
     $(hits_id).text(humanlize(hits));
     $(miss_id).text(humanlize(miss));
+    $(clients_id).text(service.connected_clients);
+    $(slaves_id).text(service.connected_slaves);
 };
 
 function update(service, currentTimeMilliseconds, cluster_size) {
@@ -262,14 +261,12 @@ function update(service, currentTimeMilliseconds, cluster_size) {
       </div>
       <div class="container">
           <div id="dependencies" class="row dependencies">
-          <% for (var i in clusters) { 
-            var cluster = clusters[i]; 
-            for (var idx in cluster.nodes) {
-            var server = cluster.nodes[idx];
+          <%  
+            for (var idx in clusters.nodes) {
+            var server = clusters.nodes[idx];
           %>
           <% include partial/display %>
           <%
-             }
           }
           %>
           </div>

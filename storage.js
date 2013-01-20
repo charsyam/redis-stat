@@ -5,7 +5,7 @@ function Storage() {
 }
 
 Storage.prototype.report_all = function(callback) {
-    callback(null, { services: this.infos});
+    callback(null, { clusters: this.infos});
 };
 
 Storage.prototype.store = function(infos) {

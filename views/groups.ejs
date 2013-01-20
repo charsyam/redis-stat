@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="/javascripts/jquery-1.8.0.min.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="/stylesheets/bootstrap.css" type="text/css" />
+    <link rel="stylesheet" href="/stylesheets/bootstrap-responsive.css" type="text/css" />
+<script>
+var self = this;
+var value = 1;
+self.charts = {};
+self.timer_interval = 5000;
+setInterval(function() {
+        // sort since we have added a new one
+        self.refresh()
+        value++;
+        }, self.timer_interval);
+
+function refresh() {
+    var self = this;
+    $.ajax({ url: '/getdata', data: {}, dataType: 'json', 
+            success: function (data) {
+            _data = data;
+            self.updates(data.clusters);
+            }, 
+error: function(xhr, ajaxOptions, thrownError) {
+//self.updatesAllError(self.charts);
+}});
+}
+
+function updatesAllError(charts) {
+    var self = this;
+    for (idx in charts) {
+        var chartid = '#chart_' +idx + ' circle';
+        self.updateCircle(chartid, 0, "fail");
+    }
+}
+
+function updates(clusters) {
+    for (var cluster_name in clusters) {
+        var cluster = clusters[cluster_name];
+        self.update(cluster, cluster_name);
+    }
+}
+
+function humanlize(value) {
+    if( value < 1024 ) {
+        return value;
+    } else if ( value < (1024*1024) ) {
+        return roundNumber(value/1024) + "k";
+    } else if ( value < (1024*1024*1024) ) {
+        return roundNumber(value/1024/1024) + "m";
+    } else if ( value < (1024*1024*1024*1024) ) {
+        return roundNumber(value/1024/1024/1024) + "g";
+    }
+
+    return value;
+}
+
+function roundNumber(num) {
+    if (num==0 || num=="undefined") {
+        return 0;
+    }
+
+    var dec=1;
+    var result = Math.round(num*Math.pow(10,dec))/Math.pow(10,dec);
+    var resultAsString = result.toString();
+    if(resultAsString.indexOf('.') == -1) {
+        resultAsString = resultAsString + '.0';
+    }
+    return resultAsString;
+};
+
+
+function update(cluster, cluster_name) {
+    var success_id = '#bar_' + cluster_name + '_success';
+    var danger_id = '#bar_' + cluster_name + '_danger';
+    var length = cluster.length;
+
+    var success_per = roundNumber(cluster.success_count * 100 / length);
+    var error_per = roundNumber(cluster.error_count * 100 / length);
+
+    var success_per = success_per + "%";
+    var error_per = error_per + "%";
+
+    $(success_id).width(success_per);
+    $(danger_id).width(error_per);
+}
+</script>
+  </head>
+  <body>
+      <div id="header">
+          <h2><span id="title_name"><%= title %></span></h2>
+      </div>
+          <%  
+            var cluster = clusters.clusters; 
+            for (var idx in cluster) {
+                var info = cluster[idx];
+          %>
+          <% include partial/groups %>
+          <%
+          }
+          %>
+      <script>self.refresh()</script>
+  </body>
+</html>
