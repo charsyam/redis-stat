@@ -76,6 +76,10 @@ function roundNumber(num) {
 function update(cluster, cluster_name) {
     var success_id = '#bar_' + cluster_name + '_success';
     var danger_id = '#bar_' + cluster_name + '_danger';
+    var info_total_id = '#info_' + cluster_name + '_total';
+    var info_success_id = '#info_' + cluster_name + '_success';
+    var info_error_id = '#info_' + cluster_name + '_error';
+
     var length = cluster.length;
 
     var success_per = roundNumber(cluster.success_count * 100 / length);
@@ -86,6 +90,13 @@ function update(cluster, cluster_name) {
 
     $(success_id).width(success_per);
     $(danger_id).width(error_per);
+
+    info_total = "Total: " + length;
+    info_success = "Success: " + cluster.success_count;
+    info_error = "Error: " + cluster.error_count;
+    $(info_total_id).text(info_total);
+    $(info_success_id).text(info_success);
+    $(info_error_id).text(info_error);
 }
 </script>
   </head>

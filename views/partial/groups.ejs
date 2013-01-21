@@ -1,4 +1,10 @@
-<%= info.name %>
+<div class="alert">
+<span class="label label-inverse"><%= info.name %></span>
+<span class="label label-warning"><a href='/?group=<%= info.name %>'>View</a></span>
+<span class="badge badge-info" id='info_<%= info.name %>_total'>0</span>
+<span class="badge badge-success" id='info_<%= info.name %>_success'>0</span>
+<span class="badge badge-important" id='info_<%= info.name %>_error'>0</span>
+</div>
 <div class="progress progress-striped">
     <div id='bar_<%= info.name %>_success' class="bar bar-success" style="width: 100%;"></div>
     <div id='bar_<%= info.name %>_danger' class="bar bar-danger" style="width: 0%;"></div>
