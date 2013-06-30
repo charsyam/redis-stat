@@ -105,14 +105,12 @@ function update(cluster, cluster_name) {
           <h2><span id="title_name"><%= title %></span></h2>
       </div>
           <%  
-            var cluster = clusters.clusters; 
-            for (var idx in cluster) {
-                var info = cluster[idx];
+            for (var idx in clusters.clusters) {
+                var name = idx;
+                var info = clusters.clusters[idx];
           %>
           <% include partial/groups %>
-          <%
-          }
-          %>
+          <% } %>
       <script>self.refresh()</script>
   </body>
 </html>

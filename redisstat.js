@@ -38,6 +38,8 @@ http.createServer(app).listen(app.get('port'), function(){
 
 var storage = new Storage();
 require('./routes/getdata').add_routes(app, storage);
+require('./routes/index').add_routes(app, storage);
+require('./routes/groups').add_routes(app, storage);
 
 var self = this;
 self.request_count = 0;
@@ -75,9 +77,6 @@ for (var i in config.clusters) {
         self.clusters.clusters.push(cluster_info);
     }
 }
-
-require('./routes/index').add_routes(app, self.clusters);
-require('./routes/groups').add_routes(app, self.clusters);
 
 setInterval(function() {
     if (self.check == false) {

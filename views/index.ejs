@@ -306,17 +306,21 @@ function update(service, currentTimeMilliseconds, cluster_size) {
             if (group != '') {
                 console.log("Not ''");
             }
-            for (var idx in clusters.nodes) {
-            var server = clusters.nodes[idx];
-            console.log(group + " " + server.cluster_name);
+            for (var idx in clusters.clusters) {
+            console.log(idx);
+            var nodes = clusters.clusters[idx].nodes;
+            console.log(nodes);
+            for (var nidx in nodes) {
+                var server = nodes[nidx];
+                
+            console.log(nidx+ " " + server.cluster_name);
             if (one == true && group != server.cluster_name) {
                 continue;
             }
           %>
           <% include partial/display %>
-          <%
-          }
-          %>
+          <% } %>
+          <% } %>
           </div>
       </div>
       <script>self.refresh()</script>
